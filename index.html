@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicReport - SQLite-Powered Civic Issue Reporting System</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="app.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<script>console.log('Testing:', document.getElementById('languageDropdown'));</script>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="mainNavbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h2>SAKSHAM</h2>
+                <small>SC-village amenties & Knowledge System for Holistic Assesment and Monitoring</small>
+            </div>
+            <div class="nav-links" id="navLinks">
+                <!-- Navigation links will be dynamically populated based on user role -->
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+        <span id="toastMessage"></span>
+        <button id="closeToast">&times;</button>
+    </div>
+    <!-- Initial Login Selection Page -->
+    <div id="loginSelectionPage" class="page active">
+        <div class="container">
+            <div class="login-selection-container">
+                <div class="login-selection-header">
+                    <h1>Welcome to CivicReport</h1>
+                    <p>Choose your login type to continue</p>
+                </div>
+                <div class="login-options-grid">
+                    <div class="login-option-card" onclick="app.showLoginType('citizen')">
+                        <div class="login-icon">👤</div>
+                        <h3>Citizen Login</h3>
+                        <p>Report and track civic issues in your community</p>
+                    </div>
+                    <div class="login-option-card" onclick="app.showLoginType('staff')">
+                        <div class="login-icon">👷</div>
+                        <h3>Staff Login</h3>
+                        <p>Manage and respond to reported issues</p>
+                    </div>
+                    <div class="login-option-card" onclick="app.showLoginType('admin')">
+                        <div class="login-icon">⚙️</div>
+                        <h3>Admin Login</h3>
+                        <p>Full system administration and oversight</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Citizen Login/Register Page -->
+    <div id="citizenAuthPage" class="page">
+        <div class="container">
+            <div class="login-container">
+                <h2>Citizen Portal</h2>
+                <div class="auth-tabs">
+                    <button id="citizenLoginTab" class="auth-tab active" onclick="app.showAuthTab('login')">Login</button>
+                    <button id="citizenRegisterTab" class="auth-tab" onclick="app.showAuthTab('register')">Register</button>
+                </div>
+                
+                <!-- Login Form -->
+                <form id="citizenLoginForm" class="auth-form active">
+                    <div class="form-group">
+                        <label for="citizenLoginEmail" class="form-label">Email</label>
+                        <input type="email" id="citizenLoginEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="citizenLoginPassword" class="form-label">Password</label>
+                        <input type="password" id="citizenLoginPassword" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                    <button type="button" class="btn btn--outline btn--full-width" onclick="app.showPage('loginSelectionPage')">Back</button>
+                </form>
+                
+                <!-- Register Form -->
+                <form id="citizenRegisterForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="citizenRegisterName" class="form-label">Full Name</label>
+                        <input type="text" id="citizenRegisterName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="citizenRegisterEmail" class="form-label">Email</label>
+                        <input type="email" id="citizenRegisterEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="citizenRegisterPassword" class="form-label">Password</label>
+                        <input type="password" id="citizenRegisterPassword" class="form-control" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="citizenRegisterConfirm" class="form-label">Confirm Password</label>
+                        <input type="password" id="citizenRegisterConfirm" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Register</button>
+                    <button type="button" class="btn btn--outline btn--full-width" onclick="app.showPage('loginSelectionPage')">Back</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Login Page -->
+    <div id="staffLoginPage" class="page">
+        <div class="container">
+            <div class="login-container">
+                <h2>Staff Login</h2>
+                <p class="login-subtitle">Department Staff Access</p>
+                <form id="staffLoginForm">
+                    <div class="form-group">
+                        <label for="staffEmail" class="form-label">Email</label>
+                        <input type="email" id="staffEmail" class="form-control" value="john.worker@city.gov" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="staffPassword" class="form-label">Password</label>
+                        <input type="password" id="staffPassword" class="form-control" value="worker123" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                    <button type="button" class="btn btn--outline btn--full-width" onclick="app.showPage('loginSelectionPage')">Back</button>
+                </form>
+                <div class="demo-credentials">
+                    <p><strong>Demo Staff Credentials:</strong></p>
+                    <p>john.worker@city.gov / worker123</p>
+                    <p>jane.electric@city.gov / staff123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Citizen Portal - Landing Page -->
+    <div id="landingPage" class="page active">
+        <div class="container">
+            <div class="hero-section">
+                <div class="hero-content">
+                    <h1>Report Rural Development Issues</h1>
+                    <p>Help transform your village into an Adarsh Gram. Our system ensures reliable tracking of rural development issues across education, healthcare, sanitation, connectivity, and livelihood. Together, we build stronger villages.</p>
+                    <button id="reportIssueBtn" class="btn btn--primary btn--lg">Report Village Issue</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalReports">0</div>
+                        <div class="stat-label">Total Reports</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="resolvedReports">0</div>
+                        <div class="stat-label">Resolved</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="avgResolutionTime">0</div>
+                        <div class="stat-label">Avg. Resolution Days</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="pendingReports">0</div>
+                        <div class="stat-label">Pending Review</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Issue Form -->
+    <div id="reportForm" class="page">
+        <div class="container">
+            <div class="form-container">
+                <h2>Report Village Development Issue</h2>
+                <form id="issueForm">
+                    <div class="form-group">
+                        <label class="form-label">Photo (Optional)</label>
+                        <div class="photo-upload">
+                            <input type="file" id="photoInput" accept="image/*" capture="environment">
+                            <div id="photoPreview" class="photo-preview hidden"></div>
+                            <button type="button" id="takePhotoBtn" class="btn btn--outline">Take Photo</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category" class="form-label">Issue Category *</label>
+                        <select id="category" class="form-control" required>
+                            <option value="">Select category...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="subcategoryGroup" style="display: none;">
+                        <label for="subcategory" class="form-label">Specific Issue *</label>
+                        <select id="subcategory" class="form-control" required>
+                            <option value="">Select specific issue...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="priority" class="form-label">Priority Level *</label>
+                        <select id="priority" class="form-control" required>
+                            <option value="">Select priority...</option>
+                            <option value="Low">Low - General improvement needed</option>
+                            <option value="Medium">Medium - Affects daily life</option>
+                            <option value="High">High - Critical village need</option>
+                            <option value="Emergency">Emergency - Immediate action required</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="title" class="form-label">Issue Title *</label>
+                        <input type="text" id="title" class="form-control" placeholder="Brief description of the issue" required maxlength="255">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description" class="form-label">Description *</label>
+                        <textarea id="description" class="form-control" rows="4" placeholder="Provide detailed information about the issue, including any relevant circumstances..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <div class="location-section">
+                            <button type="button" id="getLocationBtn" class="btn btn--outline">Get Current Location</button>
+                            <div id="locationDisplay" class="location-display"></div>
+                            <input type="text" id="manualAddress" class="form-control" placeholder="Or enter address manually...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contactEmail" class="form-label">Contact Email (Optional)</label>
+                        <input type="email" id="contactEmail" class="form-control" placeholder="your.email@example.com">
+                        <small class="form-text">Provide your email to receive updates on this report</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="cancelReportBtn" class="btn btn--outline">Cancel</button>
+                        <button type="submit" id="submitReportBtn" class="btn btn--primary">Submit Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map View -->
+    <div id="mapPage" class="page">
+        <div class="container">
+            <h2>Village Issues Map</h2>
+            <div class="map-controls">
+                <div class="filter-controls">
+                    <select id="mapCategoryFilter" class="form-control">
+                        <option value="">All Categories</option>
+                    </select>
+                    <select id="mapStatusFilter" class="form-control">
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                    </select>
+                    <select id="mapPriorityFilter" class="form-control">
+                        <option value="">All Priorities</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Emergency">Emergency</option>
+                    </select>
+                </div>
+            </div>
+            <div id="mapContainer" class="map-container"></div>
+            <div id="mapLegend" class="map-legend">
+                <h4>Legend</h4>
+                <div class="legend-items"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Track Reports -->
+    <div id="trackPage" class="page">
+        <div class="container">
+            <h2>Track Your Village Reports</h2>
+            <div class="tracking-form">
+                <div class="form-group">
+                    <input type="email" id="trackingEmail" class="form-control" placeholder="Enter your email to view your reports">
+                    <button id="loadReportsBtn" class="btn btn--primary">Load Reports</button>
+                </div>
+            </div>
+            <div id="userReports" class="reports-list"></div>
+        </div>
+    </div>
+
+    <!-- Admin Login -->
+    <div id="adminLogin" class="page">
+        <div class="container">
+            <div class="login-container">
+                <h2>Administrative Login</h2>
+                <p class="login-subtitle">System Administrator Access</p>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="adminEmail" class="form-label">Email</label>
+                        <input type="email" id="adminEmail" class="form-control" value="admin@city.gov" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminPassword" class="form-label">Password</label>
+                        <input type="password" id="adminPassword" class="form-control" value="admin123" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                    <button type="button" class="btn btn--outline btn--full-width" onclick="app.showPage('loginSelectionPage')">Back</button>
+                </form>
+                <div class="demo-credentials">
+                    <p><strong>Demo Admin Credentials:</strong></p>
+                    <p>admin@city.gov / admin123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="page">
+        <div class="container">
+            <div class="admin-header">
+                <div>
+                    <h2>Rural Development Dashboard</h2>
+                    <p class="admin-subtitle">Adarsh Gram Management System</p>
+                </div>
+                <div class="admin-user-info">
+                    <span id="currentUserInfo">Welcome, Admin</span>
+                    <button id="logoutBtn" class="btn btn--outline">Logout</button>
+                </div>
+            </div>
+            
+            <div class="admin-nav">
+                <button id="dashboardTab" class="admin-tab active">Dashboard</button>
+                <button id="reportsTab" class="admin-tab">Reports Management</button>
+                <button id="analyticsTab" class="admin-tab">Analytics</button>
+                <button id="usersTab" class="admin-tab">Users</button>
+                <button id="settingsTab" class="admin-tab">Settings</button>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div id="dashboardContent" class="admin-content active">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="adminTotalReports">0</div>
+                        <div class="metric-label">Total Reports</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="adminPendingReports">0</div>
+                        <div class="metric-label">Pending</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="adminInProgressReports">0</div>
+                        <div class="metric-label">In Progress</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="adminResolvedReports">0</div>
+                        <div class="metric-label">Resolved</div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="priority-queue">
+                        <h3>High Priority Issues</h3>
+                        <div id="urgentIssues" class="urgent-issues-list"></div>
+                    </div>
+
+                    <div class="recent-reports">
+                        <h3>Recent Reports</h3>
+                        <div id="recentReports" class="recent-reports-list"></div>
+                    </div>
+                </div>
+
+                <div class="department-workload">
+                    <h3>Department Workload</h3>
+                    <div id="departmentWorkload" class="department-grid"></div>
+                </div>
+            </div>
+
+            <!-- Reports Management Tab -->
+            <div id="reportsContent" class="admin-content">
+                <div class="reports-header">
+                    <h3>Reports Management</h3>
+                    <div class="reports-controls">
+                        <input type="text" id="searchReports" class="form-control" placeholder="Search reports...">
+                        <select id="adminCategoryFilter" class="form-control">
+                            <option value="">All Categories</option>
+                        </select>
+                        <select id="adminStatusFilter" class="form-control">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                        <select id="adminDepartmentFilter" class="form-control">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="reportsTable" class="reports-table"></div>
+                <div id="reportsPagination" class="pagination"></div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="analyticsContent" class="admin-content">
+                <h3>Analytics & Insights</h3>
+                <div class="analytics-summary">
+                    <div class="analytics-card">
+                        <h4>Response Time</h4>
+                        <div class="analytics-metric">
+                            <span class="metric-number" id="avgResponseTime">2.3</span>
+                            <span class="metric-unit">days avg</span>
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <h4>Resolution Rate</h4>
+                        <div class="analytics-metric">
+                            <span class="metric-number" id="resolutionRate">87</span>
+                            <span class="metric-unit">% resolved</span>
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <h4>Citizen Satisfaction</h4>
+                        <div class="analytics-metric">
+                            <span class="metric-number" id="satisfactionRate">4.2</span>
+                            <span class="metric-unit">/ 5.0 stars</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="charts-grid">
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="reportsChart"></canvas>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="resolutionChart"></canvas>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="departmentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <!-- Users Tab -->
+            <div id="usersTab">
+            <!-- existing users management markup -->
+                <button id="addUserBtn" class="btn btn--primary" onclick="app.showUserModal()">Add User</button>
+
+<!-- Language Translation Button -->
+<button id="languageBtn" class="btn btn--primary" onclick="toggleLanguageDropdown()" style="margin-left: 10px; position: relative;">
+    🌐 Language
+    <span id="currentLanguage">English</span>
+    <span style="margin-left: 5px;">▼</span>
+</button>
+
+<!-- Language Dropdown Menu -->
+<div id="languageDropdown" class="language-dropdown hidden">
+    <div class="dropdown-item" onclick="changeLanguage('en', 'English')">
+        🇺🇸 English
+    </div>
+    <div class="dropdown-item" onclick="changeLanguage('hi', 'हिन्दी')">
+        🇮🇳 हिन्दी (Hindi)
+    </div>
+    <div class="dropdown-item" onclick="changeLanguage('mr', 'मराठी')">
+        🇮🇳 मराठी (Marathi)
+    </div>
+    <div class="dropdown-item" onclick="changeLanguage('kn', 'ಕನ್ನಡ')">
+        🇮🇳 ಕನ್ನಡ (Kannada)
+    </div>
+    <div class="dropdown-item" onclick="changeLanguage('or', 'ଓଡ଼ିଆ')">
+        🇮🇳 ଓଡ଼ିଆ (Odia)
+    </div>
+</div>
+                <div id="usersTable"></div>
+            </div>
+
+            <!-- Export Section -->
+
+            <div id="exportSection" style="margin: 1rem 0; display: none;">
+                <h3>Export Reports</h3>
+                <button class="btn btn--primary" onclick="app.exportReportsToExcel()">
+                    <i class="icon-download"></i> Export to Excel
+                </button>
+                <button class="btn btn--secondary" onclick="app.exportReportsToPDF()">
+                    <i class="icon-file"></i> Export to PDF
+                </button>
+            </div>
+
+
+            <!-- Settings Tab -->
+            <div id="settingsContent" class="admin-content">
+                <h3>System Settings</h3>
+                <div class="settings-sections">
+                    <div class="settings-section">
+                        <h4>Categories Management</h4>
+                        <div id="categoriesList" class="categories-list"></div>
+                        <button id="addCategoryBtn" class="btn btn--outline">Add Category</button>
+                    </div>
+                    <div class="settings-section">
+                        <h4>Departments Management</h4>
+                        <div id="departmentsList" class="departments-list"></div>
+                        <button id="addDepartmentBtn" class="btn btn--outline">Add Department</button>
+                    </div>
+                </div>
+                <div class="database-info">
+                    <h4>Database Information</h4>
+                    <div class="db-stats">
+                        <p><strong>Database Type:</strong> SQLite (simulated)</p>
+                        <p><strong>Total Records:</strong> <span id="totalRecords">0</span></p>
+                        <p><strong>Database Size:</strong> <span id="dbSize">0</span> KB</p>
+                        <p><strong>Last Backup:</strong> <span id="lastBackup">Never</span></p>
+                    </div>
+                    <div class="db-actions">
+                        <button id="backupDbBtn" class="btn btn--outline">Backup Database</button>
+                        <button id="clearDataBtn" class="btn btn--outline">Clear All Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Detail Modal -->
+    <div id="reportModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Report Details</h3>
+                <button id="closeModal" class="close-btn">&times;</button>
+            </div>
+            <div id="reportModalBody" class="modal-body"></div>
+            <div class="modal-footer">
+                <button id="updateStatusBtn" class="btn btn--primary">Update Status</button>
+                <button id="assignDeptBtn" class="btn btn--outline">Reassign Department</button>
+                <button id="closeModalBtn" class="btn btn--outline">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="userModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New User</h3>
+                <button id="closeUserModal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <div class="form-group">
+                        <label for="userName" class="form-label">Name *</label>
+                        <input type="text" id="userName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userEmail" class="form-label">Email *</label>
+                        <input type="email" id="userEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userPassword">Password *</label>
+                        <input type="password" id="userPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password *</label>
+                        <input type="password" id="confirmPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userRole" class="form-label">Role *</label>
+                        <select id="userRole" class="form-control" required>
+                            <option value="">Select role...</option>
+                            <option value="citizen">Citizen</option>
+                            <option value="staff">Staff</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="userDepartment" class="form-label">Department</label>
+                        <select id="userDepartment" class="form-control">
+                            <option value="">Select department...</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="saveUserBtn" class="btn btn--primary">Save User</button>
+                <button id="cancelUserBtn" class="btn btn--outline">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
