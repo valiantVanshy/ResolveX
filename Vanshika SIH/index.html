@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicReport - SQLite-Powered Civic Issue Reporting System</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="app.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="mainNavbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h2>SAKSHAM</h2>
+                <small>SC-village amenties & Knowledge System for Holistic Assesment and Monitoring</small>
+            </div>
+            <div class="nav-links" id="navLinks">
+                <!-- Navigation links will be dynamically populated based on user role -->
+                <div class="notification-container">
+                    <button id="notificationBell" class="notification-bell">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        <span id="notificationBadge" class="notification-badge hidden">0</span>
+                    </button>
+                    <div id="notificationPanel" class="notification-panel hidden">
+                        <div class="notification-panel-header">
+                            <h3>Notifications</h3>
+                            <button id="markAllReadBtn">Mark all as read</button>
+                        </div>
+                        <div id="notificationList" class="notification-list">
+                            <div class="empty-state">
+                                <p>You have no new notifications.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+        <span id="toastMessage"></span>
+        <button id="closeToast">&times;</button>
+    </div>
+    <!-- Initial Login Selection Page -->
+    <div id="loginSelectionPage" class="page active">
+        <div class="container">
+            <div class="login-selection-container">
+                <div class="login-selection-header">
+                    <h1>Welcome to CivicReport</h1>
+                    <p>Choose your login type to continue</p>
+                </div>
+                <div class="login-options-grid">
+                    <div class="login-option-card" onclick="app.showLoginType('citizen')">
+                        <div class="login-icon">👤</div>
+                        <h3>Citizen Login</h3>
+                        <p>Report and track civic issues in your community</p>
+                    </div>
+                    <div class="login-option-card" onclick="app.showLoginType('staff')">
+                        <div class="login-icon">👷</div>
+                        <h3>Staff Login</h3>
+                        <p>Manage and respond to reported issues</p>
+                    </div>
+                    <div class="login-option-card" onclick="app.showLoginType('admin')">
+                        <div class="login-icon">⚙️</div>
+                        <h3>Admin Login</h3>
+                        <p>Full system administration and oversight</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Citizen Login/Register Page -->
+    <div id="citizenAuthPage" class="page">
+        <div class="container">
+            <div class="login-container">
+                <h2>Citizen Portal</h2>
+                <div class="auth-tabs">
+                    <button id="citizenLoginTab" class="auth-tab active" onclick="app.showAuthTab('login')">Login</button>
+                    <button id="citizenRegisterTab" class="auth-tab" onclick="app.showAuthTab('register')">Register</button>
+                </div>
+                
+                <!-- Login Form -->
+                <form id="citizenLoginForm" class="auth-form active">
+                    <div class="form-group">
+                        <label for="citizenLoginEmail" class="form-label">Email</label>
+                        <input type="email" id="citizenLoginEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="citizenLoginPassword" class="form-label">Password</label>
+                        <input type="password" id="citizenLoginPassword" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                    <button type="button" class="btn btn--outline btn--full-width" onclick="app.showPage('loginSelectionPage')">Back</button>
+                </form>
+                
+                <!-- Register Form -->
+                <form id="citizenRegisterForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="citizenRegisterName" class="form-label">Full Name</label>
+                        <input type="text" id="citizenRegisterName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="citizenRegisterEmail" class="form-label">Email</label>
+                        <input type="email" id="citizenRegisterEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="citizenRegisterPassword" class="form-label">Password</label>
+                        <input type="password" id="citizenRegisterPassword" class="form-control" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="citizenRegisterConfirm" class="form-label">Confirm Password</label>
+                        <input type="password" id="citizenRegisterConfirm" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Register</button>
+                    <button type="button" class="btn btn--outline btn--full-width" onclick="app.showPage('loginSelectionPage')">Back</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Login Page -->
+    <div id="staffLoginPage" class="page">
+        <div class="container">
+            <div class="login-container">
+                <h2>Staff Login</h2>
+                <p class="login-subtitle">Department Staff Access</p>
+                <form id="staffLoginForm">
+                    <div class="form-group">
+                        <label for="staffEmail" class="form-label">Email</label>
+                        <input type="email" id="staffEmail" class="form-control" value="john.worker@city.gov" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="staffPassword" class="form-label">Password</label>
+                        <input type="password" id="staffPassword" class="form-control" value="worker123" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                    <button type="button" class="btn btn--outline btn--full-width" onclick="app.showPage('loginSelectionPage')">Back</button>
+                </form>
+                <div class="demo-credentials">
+                    <p><strong>Demo Staff Credentials:</strong></p>
+                    <p>john.worker@city.gov / worker123</p>
+                    <p>jane.electric@city.gov / staff123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Citizen Portal - Landing Page -->
+    <div id="landingPage" class="page active">
+        <div class="container">
+            <div class="hero-section">
+                <div class="hero-content">
+                    <h1>Report Rural Development Issues</h1>
+                    <p>Help transform your village into an Adarsh Gram. Our system ensures reliable tracking of rural development issues across education, healthcare, sanitation, connectivity, and livelihood. Together, we build stronger villages.</p>
+                    <button id="reportIssueBtn" class="btn btn--primary btn--lg">Report Village Issue</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalReports">0</div>
+                        <div class="stat-label">Total Reports</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="resolvedReports">0</div>
+                        <div class="stat-label">Resolved</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="avgResolutionTime">0</div>
+                        <div class="stat-label">Avg. Resolution Days</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="pendingReports">0</div>
+                        <div class="stat-label">Pending Review</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Issue Form -->
+    <div id="reportForm" class="page">
+        <div class="container">
+            <div class="form-container">
+                <h2>Report Village Development Issue</h2>
+                <form id="issueForm">
+                    <div class="form-group">
+                        <label class="form-label">Photo (Optional)</label>
+                        <div class="photo-upload">
+                            <input type="file" id="photoInput" accept="image/*" capture="environment">
+                            <div id="photoPreview" class="photo-preview hidden"></div>
+                            <button type="button" id="takePhotoBtn" class="btn btn--outline">Take Photo</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category" class="form-label">Issue Category *</label>
+                        <select id="category" class="form-control" required>
+                            <option value="">Select category...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="subcategoryGroup" style="display: none;">
+                        <label for="subcategory" class="form-label">Specific Issue *</label>
+                        <select id="subcategory" class="form-control" required>
+                            <option value="">Select specific issue...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="priority" class="form-label">Priority Level *</label>
+                        <select id="priority" class="form-control" required>
+                            <option value="">Select priority...</option>
+                            <option value="Low">Low - General improvement needed</option>
+                            <option value="Medium">Medium - Affects daily life</option>
+                            <option value="High">High - Critical village need</option>
+                            <option value="Emergency">Emergency - Immediate action required</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="title" class="form-label">Issue Title *</label>
+                        <input type="text" id="title" class="form-control" placeholder="Brief description of the issue" required maxlength="255">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description" class="form-label">Description *</label>
+                        <textarea id="description" class="form-control" rows="4" placeholder="Provide detailed information about the issue, including any relevant circumstances..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <div class="location-section">
+                            <button type="button" id="getLocationBtn" class="btn btn--outline">Get Current Location</button>
+                            <div id="locationDisplay" class="location-display"></div>
+                            <input type="text" id="manualAddress" class="form-control" placeholder="Or enter address manually...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contactEmail" class="form-label">Contact Email (Optional)</label>
+                        <input type="email" id="contactEmail" class="form-control" placeholder="your.email@example.com">
+                        <small class="form-text">Provide your email to receive updates on this report</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="cancelReportBtn" class="btn btn--outline">Cancel</button>
+                        <button type="submit" id="submitReportBtn" class="btn btn--primary">Submit Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map View -->
+    <div id="mapPage" class="page">
+        <div class="container">
+            <h2>Village Issues Map</h2>
+            <div class="map-controls">
+                <div class="filter-controls">
+                    <select id="mapCategoryFilter" class="form-control">
+                        <option value="">All Categories</option>
+                    </select>
+                    <select id="mapStatusFilter" class="form-control">
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                    </select>
+                    <select id="mapPriorityFilter" class="form-control">
+                        <option value="">All Priorities</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Emergency">Emergency</option>
+                    </select>
+                </div>
+            </div>
+            <div id="mapContainer" class="map-container"></div>
+            <div id="mapLegend" class="map-legend">
+                <h4>Legend</h4>
+                <div class="legend-items"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Track Reports -->
+    <div id="trackPage" class="page">
+        <div class="container">
+            <h2>Track Your Village Reports</h2>
+            <div class="tracking-form">
+                <div class="form-group">
+                    <input type="email" id="trackingEmail" class="form-control" placeholder="Enter your email to view your reports">
+                    <button id="loadReportsBtn" class="btn btn--primary">Load Reports</button>
+                </div>
+            </div>
+            <div id="userReports" class="reports-list"></div>
+        </div>
+    </div>
+
+    <!-- Admin Login -->
+    <div id="adminLogin" class="page">
+        <div class="container">
+            <div class="login-container">
+                <h2>Administrative Login</h2>
+                <p class="login-subtitle">System Administrator Access</p>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="adminEmail" class="form-label">Email</label>
+                        <input type="email" id="adminEmail" class="form-control" value="admin@city.gov" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="adminPassword" class="form-label">Password</label>
+                        <input type="password" id="adminPassword" class="form-control" value="admin123" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                    <button type="button" class="btn btn--outline btn--full-width" onclick="app.showPage('loginSelectionPage')">Back</button>
+                </form>
+                <div class="demo-credentials">
+                    <p><strong>Demo Admin Credentials:</strong></p>
+                    <p>admin@city.gov / admin123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="page">
+        <div class="container">
+            <div class="admin-header">
+                <div>
+                    <h2>Rural Development Dashboard</h2>
+                    <p class="admin-subtitle">Adarsh Gram Management System</p>
+                </div>
+                <div class="admin-user-info">
+                    <span id="currentUserInfo">Welcome, Admin</span>
+                    <button id="logoutBtn" class="btn btn--outline">Logout</button>
+                </div>
+            </div>
+            
+            <div class="admin-nav">
+    <button id="dashboardTab" class="admin-tab active">Dashboard</button>
+    <button id="reportsTab" class="admin-tab">Reports Management</button>
+    <button id="analyticsTab" class="admin-tab">Analytics</button>
+    <button id="usersTab" class="admin-tab">Users</button>
+    <button id="settingsTab" class="admin-tab">Settings</button>
+    
+    <!-- Language Selector -->
+    <div class="language-selector">
+        <button class="admin-tab" id="langBtn">Language</button>
+        <div class="dropdown-content" id="langDropdown">
+            <a href="#" data-lang="english">English</a>
+            <a href="#" data-lang="hindi">हिंदी (Hindi)</a>
+            <a href="#" data-lang="marathi">मराठी (Marathi)</a>
+            <a href="#" data-lang="odia">ଓଡ଼ିଆ (Odia)</a>
+            <a href="#" data-lang="kannada">ಕನ್ನಡ (Kannada)</a>
+        </div>
+    </div>
+</div>
+
+
+            <!-- Dashboard Tab -->
+            <div id="dashboardContent" class="admin-content active">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="adminTotalReports">0</div>
+                        <div class="metric-label">Total Reports</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="adminPendingReports">0</div>
+                        <div class="metric-label">Pending</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="adminInProgressReports">0</div>
+                        <div class="metric-label">In Progress</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="adminResolvedReports">0</div>
+                        <div class="metric-label">Resolved</div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="priority-queue">
+                        <h3>High Priority Issues</h3>
+                        <div id="urgentIssues" class="urgent-issues-list"></div>
+                    </div>
+
+                    <div class="recent-reports">
+                        <h3>Recent Reports</h3>
+                        <div id="recentReports" class="recent-reports-list"></div>
+                    </div>
+                </div>
+
+                <div class="department-workload">
+                    <h3>Department Workload</h3>
+                    <div id="departmentWorkload" class="department-grid"></div>
+                </div>
+            </div>
+
+            <!-- Reports Management Tab -->
+            <div id="reportsContent" class="admin-content">
+                <div class="reports-header">
+                    <h3>Reports Management</h3>
+                    <div class="reports-controls">
+                        <input type="text" id="searchReports" class="form-control" placeholder="Search reports...">
+                        <select id="adminCategoryFilter" class="form-control">
+                            <option value="">All Categories</option>
+                        </select>
+                        <select id="adminStatusFilter" class="form-control">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                        <select id="adminDepartmentFilter" class="form-control">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="reportsTable" class="reports-table"></div>
+                <div id="reportsPagination" class="pagination"></div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="analyticsContent" class="admin-content">
+                <h3>Analytics & Insights</h3>
+                <div class="analytics-summary">
+                    <div class="analytics-card">
+                        <h4>Response Time</h4>
+                        <div class="analytics-metric">
+                            <span class="metric-number" id="avgResponseTime">2.3</span>
+                            <span class="metric-unit">days avg</span>
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <h4>Resolution Rate</h4>
+                        <div class="analytics-metric">
+                            <span class="metric-number" id="resolutionRate">87</span>
+                            <span class="metric-unit">% resolved</span>
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <h4>Citizen Satisfaction</h4>
+                        <div class="analytics-metric">
+                            <span class="metric-number" id="satisfactionRate">4.2</span>
+                            <span class="metric-unit">/ 5.0 stars</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="charts-grid">
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="reportsChart"></canvas>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="resolutionChart"></canvas>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="departmentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <!-- Users Tab -->
+            <div id="usersTab">
+            <!-- existing users management markup -->
+                <button id="addUserBtn" class="btn btn--primary" onclick="app.showUserModal()">Add User</button>
+                <div id="usersTable"></div>
+            </div>
+
+            <!-- Export Section -->
+
+            <div id="exportSection" style="margin: 1rem 0; display: none;">
+                <h3>Export Reports</h3>
+                <button class="btn btn--primary" onclick="app.exportReportsToExcel()">
+                    <i class="icon-download"></i> Export to Excel
+                </button>
+                <button class="btn btn--secondary" onclick="app.exportReportsToPDF()">
+                    <i class="icon-file"></i> Export to PDF
+                </button>
+            </div>
+
+
+            <!-- Settings Tab -->
+            <div id="settingsContent" class="admin-content">
+                <h3>System Settings</h3>
+                <div class="settings-sections">
+                    <div class="settings-section">
+                        <h4>Categories Management</h4>
+                        <div id="categoriesList" class="categories-list"></div>
+                        <button id="addCategoryBtn" class="btn btn--outline">Add Category</button>
+                    </div>
+                    <div class="settings-section">
+                        <h4>Departments Management</h4>
+                        <div id="departmentsList" class="departments-list"></div>
+                        <button id="addDepartmentBtn" class="btn btn--outline">Add Department</button>
+                    </div>
+                </div>
+                <div class="database-info">
+                    <h4>Database Information</h4>
+                    <div class="db-stats">
+                        <p><strong>Database Type:</strong> SQLite (simulated)</p>
+                        <p><strong>Total Records:</strong> <span id="totalRecords">0</span></p>
+                        <p><strong>Database Size:</strong> <span id="dbSize">0</span> KB</p>
+                        <p><strong>Last Backup:</strong> <span id="lastBackup">Never</span></p>
+                    </div>
+                    <div class="db-actions">
+                        <button id="backupDbBtn" class="btn btn--outline">Backup Database</button>
+                        <button id="clearDataBtn" class="btn btn--outline">Clear All Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Detail Modal -->
+    <div id="reportModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Report Details</h3>
+                <button id="closeModal" class="close-btn">&times;</button>
+            </div>
+            <div id="reportModalBody" class="modal-body"></div>
+            <div class="modal-footer">
+                <button id="updateStatusBtn" class="btn btn--primary">Update Status</button>
+                <button id="assignDeptBtn" class="btn btn--outline">Reassign Department</button>
+                <button id="closeModalBtn" class="btn btn--outline">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="userModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New User</h3>
+                <button id="closeUserModal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <div class="form-group">
+                        <label for="userName" class="form-label">Name *</label>
+                        <input type="text" id="userName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userEmail" class="form-label">Email *</label>
+                        <input type="email" id="userEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userPassword">Password *</label>
+                        <input type="password" id="userPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password *</label>
+                        <input type="password" id="confirmPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userRole" class="form-label">Role *</label>
+                        <select id="userRole" class="form-control" required>
+                            <option value="">Select role...</option>
+                            <option value="citizen">Citizen</option>
+                            <option value="staff">Staff</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="userDepartment" class="form-label">Department</label>
+                        <select id="userDepartment" class="form-control">
+                            <option value="">Select department...</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="saveUserBtn" class="btn btn--primary">Save User</button>
+                <button id="cancelUserBtn" class="btn btn--outline">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+// COMPLETE Translation data for ENTIRE website - ALL text elements
+const translations = {
+    // Main Navigation & Branding
+    "SAKSHAM": {
+        hindi: "सक्षम",
+        marathi: "सक्षम", 
+        odia: "ସକ୍ଷମ",
+        kannada: "ಸಕ್ಷಮ್"
+    },
+    "SC-village amenties & Knowledge System for Holistic Assesment and Monitoring": {
+        hindi: "एससी-गांव सुविधाएं और व्यापक मूल्यांकन और निगरानी के लिए ज्ञान प्रणाली",
+        marathi: "एससी-गाव सुविधा आणि सर्वसमावेशक मूल्यांकन आणि निरीक्षणासाठी ज्ञान प्रणाली",
+        odia: "ଏସସି-ଗ୍ରାମ ସୁବିଧା ଏବଂ ସମଗ୍ର ମୂଲ୍ୟାଙ୍କନ ଏବଂ ମନିଟରିଂ ପାଇଁ ଜ୍ଞାନ ପ୍ରଣାଳୀ",
+        kannada: "ಎಸ್ಸಿ-ಗ್ರಾಮ ಸೌಕರ್ಯಗಳು ಮತ್ತು ಸಮಗ್ರ ಮೌಲ್ಯಮಾಪನ ಮತ್ತು ಮಾನಿಟರಿಂಗ್‌ಗಾಗಿ ಜ್ಞಾನ ವ್ಯವಸ್ಥೆ"
+    },
+    
+    // Navigation Menu
+    "Home": {
+        hindi: "होम",
+        marathi: "मुख्यपृष्ठ",
+        odia: "ମୂଖ୍ୟ ପୃଷ୍ଠା",
+        kannada: "ಮುಖ್ಯ ಪುಟ"
+    },
+    "Map": {
+        hindi: "मैप",
+        marathi: "नकाशा",
+        odia: "ମାନଚିତ୍ର",
+        kannada: "ನಕ್ಷೆ"
+    },
+    "Track Reports": {
+        hindi: "रिपोर्ट ट्रैक करें",
+        marathi: "अहवाल ट्रॅक करा",
+        odia: "ରିପୋର୍ଟ ଟ୍ରାକ୍ କରନ୍ତୁ",
+        kannada: "ವರದಿಗಳನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಿ"
+    },
+    "Admin": {
+        hindi: "एडमिन",
+        marathi: "प्रशासक",
+        odia: "ଆଡମିନ",
+        kannada: "ನಿರ್ವಾಹಕ"
+    },
+    "Staff Dashboard": {
+        hindi: "स्टाफ डैशबोर्ड",
+        marathi: "कर्मचारी डॅशबोर्ड",
+        odia: "ଷ୍ଟାଫ୍ ଡ୍ୟାସବୋର୍ଡ",
+        kannada: "ಸಿಬ್ಬಂದಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್"
+    },
+    "Logout": {
+        hindi: "लॉग आउट",
+        marathi: "लॉग आउट",
+        odia: "ଲଗ୍ ଆଉଟ୍",
+        kannada: "ಲಾಗ್ಔಟ್"
+    },
+
+    // Login Pages
+    "Administrative Login": {
+        hindi: "प्रशासनिक लॉगिन",
+        marathi: "प्रशासकीय लॉगिन",
+        odia: "ପ୍ରଶାସନିକ ଲଗଇନ",
+        kannada: "ಆಡಳಿತಾತ್ಮಕ ಲಾಗಿನ್"
+    },
+    "System Administrator Access": {
+        hindi: "सिस्टम एडमिनिस्ट्रेटर पहुंच",
+        marathi: "सिस्टम प्रशासक प्रवेश",
+        odia: "ସିଷ୍ଟମ ଆଡମିନିଷ୍ଟ୍ରେଟର ପ୍ରବେଶ",
+        kannada: "ಸಿಸ್ಟಂ ಅಡ್ಮಿನಿಸ್ಟ್ರೇಟರ್ ಪ್ರವೇಶ"
+    },
+    "Email": {
+        hindi: "ईमेल",
+        marathi: "ईमेल",
+        odia: "ଇମେଲ",
+        kannada: "ಇಮೇಲ್"
+    },
+    "Password": {
+        hindi: "पासवर्ड",
+        marathi: "पासवर्ड",
+        odia: "ପାସୱର୍ଡ",
+        kannada: "ಪಾಸ್‌ವರ್ಡ್"
+    },
+    "Login": {
+        hindi: "लॉगिन",
+        marathi: "लॉगिन",
+        odia: "ଲଗଇନ",
+        kannada: "ಲಾಗಿನ್"
+    },
+    "Back": {
+        hindi: "वापस",
+        marathi: "परत",
+        odia: "ଫେରିଯିବା",
+        kannada: "ಹಿಂತಿರುಗಿ"
+    },
+    "Demo Admin Credentials:": {
+        hindi: "डेमो एडमिन क्रेडेंशियल:",
+        marathi: "डेमो अॅडमिन क्रेडेन्शियल्स:",
+        odia: "ଡେମୋ ଆଡମିନ କ୍ରେଡେନସିଆଲ:",
+        kannada: "ಡೆಮೊ ಅಡ್ಮಿನ್ ಪ್ರಮಾಣಪತ್ರಗಳು:"
+    },
+
+    // Village Issues Map
+    "Village Issues Map": {
+        hindi: "गांव के मुद्दों का मैप",
+        marathi: "गावातील समस्यांचा नकाशा",
+        odia: "ଗ୍ରାମ ସମସ୍ୟା ମାନଚିତ୍ର",
+        kannada: "ಗ್ರಾಮದ ಸಮಸ್ಯೆಗಳ ನಕ್ಷೆ"
+    },
+    "All Categories": {
+        hindi: "सभी श्रेणियां",
+        marathi: "सर्व प्रकार",
+        odia: "ସମସ୍ତ ଶ୍ରେଣୀ",
+        kannada: "ಎಲ್ಲಾ ವರ್ಗಗಳು"
+    },
+    "All Statuses": {
+        hindi: "सभी स्थितियां",
+        marathi: "सर्व स्थिती",
+        odia: "ସମସ୍ତ ସ୍ଥିତି",
+        kannada: "ಎಲ್ಲಾ ಸ್ಥಿತಿಗಳು"
+    },
+    "All Priorities": {
+        hindi: "सभी प्राथमिकताएं",
+        marathi: "सर्व प्राधान्यता",
+        odia: "ସମସ୍ତ ପ୍ରାଥମିକତା",
+        kannada: "ಎಲ್ಲಾ ಆದ್ಯತೆಗಳು"
+    },
+
+    // Categories
+    "Education": {
+        hindi: "शिक्षा",
+        marathi: "शिक्षण",
+        odia: "ଶିକ୍ଷା",
+        kannada: "ಶಿಕ್ಷಣ"
+    },
+    "Healthcare": {
+        hindi: "स्वास्थ्य सेवा",
+        marathi: "आरोग्यसेवा",
+        odia: "ସ୍ୱାସ୍ଥ୍ୟସେବା",
+        kannada: "ಆರೋಗ್ಯ ಸೇವೆ"
+    },
+    "Drinking Water": {
+        hindi: "पेयजल",
+        marathi: "पिण्याचे पाणी",
+        odia: "ପାନୀୟ ଜଳ",
+        kannada: "ಕುಡಿಯುವ ನೀರು"
+    },
+    "Sanitation": {
+        hindi: "स्वच्छता",
+        marathi: "स्वच्छता",
+        odia: "ପରିଷ୍କାରତା",
+        kannada: "ನೈರ್ಮಲ್ಯ"
+    },
+    "Electricity": {
+        hindi: "बिजली",
+        marathi: "वीज",
+        odia: "ବିଦ୍ୟୁତ",
+        kannada: "ವಿದ್ಯುತ್"
+    },
+    "Roads & Connectivity": {
+        hindi: "सड़क और कनेक्टिविटी",
+        marathi: "रस्ते आणि कनेक्टिव्हिटी",
+        odia: "ସଡ଼କ ଏବଂ ସଂଯୋଗ",
+        kannada: "ರಸ್ತೆಗಳು ಮತ್ತು ಸಂಪರ್ಕ"
+    },
+    "Skill Development": {
+        hindi: "कौशल विकास",
+        marathi: "कौशल्य विकास",
+        odia: "ଦକ୍ଷତା ବିକାଶ",
+        kannada: "ಕೌಶಲ್ಯ ಅಭಿವೃದ್ಧಿ"
+    },
+    "Agriculture & Livelihood": {
+        hindi: "कृषि और आजीविका",
+        marathi: "शेती आणि उपजीविका",
+        odia: "କୃଷି ଏବଂ ଜୀବିକା",
+        kannada: "ಕೃಷಿ ಮತ್ತು ಜೀವನೋಪಾಯ"
+    },
+    "Housing": {
+        hindi: "आवास",
+        marathi: "गृहनिर्माण",
+        odia: "ଗୃହ",
+        kannada: "ವಸತಿ"
+    },
+    "Social Welfare": {
+        hindi: "सामाजिक कल्याण",
+        marathi: "सामाजिक कल्याण",
+        odia: "ସାମାଜିକ କଲ୍ୟାଣ",
+        kannada: "ಸಾಮಾಜಿಕ ಕಲ್ಯಾಣ"
+    },
+
+    // Priority Levels
+    "Low": {
+        hindi: "कम",
+        marathi: "कमी",
+        odia: "କମ୍",
+        kannada: "ಕಡಿಮೆ"
+    },
+    "Medium": {
+        hindi: "मध्यम",
+        marathi: "मध्यम",
+        odia: "ମଧ୍ୟମ",
+        kannada: "ಮಧ್ಯಮ"
+    },
+    "High": {
+        hindi: "उच्च",
+        marathi: "उच्च",
+        odia: "ଉଚ୍ଚ",
+        kannada: "ಹೆಚ್ಚು"
+    },
+    "Emergency": {
+        hindi: "आपातकाल",
+        marathi: "आणीबाणी",
+        odia: "ଜରୁରୀ",
+        kannada: "ತುರ್ತು"
+    },
+
+    // Departments
+    "All Departments": {
+        hindi: "सभी विभाग",
+        marathi: "सर्व विभाग",
+        odia: "ସମସ୍ତ ବିଭାଗ",
+        kannada: "ಎಲ್ಲಾ ಇಲಾಖೆಗಳು"
+    },
+    "Education Department": {
+        hindi: "शिक्षा विभाग",
+        marathi: "शिक्षण विभाग",
+        odia: "ଶିକ୍ଷା ବିଭାଗ",
+        kannada: "ಶಿಕ್ಷಣ ಇಲಾಖೆ"
+    },
+    "Health & Medical Services": {
+        hindi: "स्वास्थ्य और चिकित्सा सेवा",
+        marathi: "आरोग्य आणि वैद्यकीय सेवा",
+        odia: "ସ୍ୱାସ୍ଥ୍ୟ ଏବଂ ଚିକିତ୍ସା ସେବା",
+        kannada: "ಆರೋಗ್ಯ ಮತ್ತು ವೈದ್ಯಕೀಯ ಸೇವೆಗಳು"
+    },
+    "Water Supply Department": {
+        hindi: "जल आपूर्ति विभाग",
+        marathi: "जलपुरवठा विभाग",
+        odia: "ଜଳ ଯୋଗାଣ ବିଭାଗ",
+        kannada: "ನೀರು ಪೂರೈಕೆ ಇಲಾಖೆ"
+    },
+    "Sanitation Department": {
+        hindi: "स्वच्छता विभाग",
+        marathi: "स्वच्छता विभाग",
+        odia: "ପରିଷ୍କାରତା ବିଭାଗ",
+        kannada: "ನೈರ್ಮಲ್ಯ ಇಲಾಖೆ"
+    },
+    "Electricity Board": {
+        hindi: "बिजली बोर्ड",
+        marathi: "वीज मंडळ",
+        odia: "ବିଦ୍ୟୁତ ବୋର୍ଡ",
+        kannada: "ವಿದ್ಯುತ್ ಮಂಡಳಿ"
+    },
+    "Public Works Department": {
+        hindi: "लोक निर्माण विभाग",
+        marathi: "सार्वजनिक बांधकाम विभाग",
+        odia: "ଲୋକ ନିର୍ମାଣ ବିଭାଗ",
+        kannada: "ಸಾರ್ವಜನಿಕ ಕಾಮಗಾರಿ ಇಲಾಖೆ"
+    },
+    "Agriculture Department": {
+        hindi: "कृषि विभाग",
+        marathi: "कृषी विभाग",
+        odia: "କୃଷି ବିଭାଗ",
+        kannada: "ಕೃಷಿ ಇಲಾಖೆ"
+    },
+    "Housing Department": {
+        hindi: "आवास विभाग",
+        marathi: "गृहनिर्माण विभाग",
+        odia: "ଗୃହ ବିଭାଗ",
+        kannada: "ವಸತಿ ಇಲಾಖೆ"
+    },
+
+    // Report Form & Main Page
+    "Report Rural Development Issues": {
+        hindi: "ग्रामीण विकास के मुद्दों की रिपोर्ट करें",
+        marathi: "ग्रामीण विकास समस्यांचा अहवाल द्या",
+        odia: "ଗ୍ରାମୀଣ ବିକାଶ ସମସ୍ୟାର ରିପୋର୍ଟ କରନ୍ତୁ",
+        kannada: "ಗ್ರಾಮೀಣ ಅಭಿವೃದ್ಧಿ ಸಮಸ್ಯೆಗಳನ್ನು ವರದಿ ಮಾಡಿ"
+    },
+    "Help transform your village into an Adarsh Gram. Our system ensures reliable tracking of rural development issues across education, healthcare, sanitation, connectivity, and livelihood. Together, we build stronger villages.": {
+        hindi: "अपने गांव को आदर्श ग्राम में बदलने में मदद करें। हमारी प्रणाली शिक्षा, स्वास्थ्य सेवा, स्वच्छता, कनेक्टिविटी और आजीविका में ग्रामीण विकास के मुद्दों की विश्वसनीय ट्रैकिंग सुनिश्चित करती है। मिलकर, हम मजबूत गांव बनाते हैं।",
+        marathi: "तुमच्या गावाचे आदर्श ग्राममध्ये रूपांतर करण्यास मदत करा. आमची प्रणाली शिक्षण, आरोग्यसेवा, स्वच्छता, कनेक्टिव्हिटी आणि उपजीविकेतील ग्रामीण विकास समस्यांचा विश्वासार्ह मागोवा घेण्याची खात्री देते. एकत्र, आम्ही मजबूत गावे बनवतो.",
+        odia: "ଆପଣଙ୍କ ଗ୍ରାମକୁ ଆଦର୍ଶ ଗ୍ରାମରେ ପରିବର୍ତ୍ତନ କରିବାରେ ସାହାଯ୍ୟ କରନ୍ତୁ। ଆମର ପ୍ରଣାଳୀ ଶିକ୍ଷା, ସ୍ୱାସ୍ଥ୍ୟସେବା, ପରିଷ୍କାରତା, ସଂଯୋଗ ଏବଂ ଜୀବିକାରେ ଗ୍ରାମୀଣ ବିକାଶ ସମସ୍ୟାର ବିଶ୍ୱସନୀୟ ଟ୍ରାକିଂ ନିଶ୍ଚିତ କରେ। ଏକାଠି, ଆମେ ଶକ୍ତିଶାଳୀ ଗ୍ରାମ ନିର୍ମାଣ କରୁ।",
+        kannada: "ನಿಮ್ಮ ಗ್ರಾಮವನ್ನು ಆದರ್ಶ ಗ್ರಾಮವಾಗಿ ಪರಿವರ್ತಿಸಲು ಸಹಾಯ ಮಾಡಿ. ನಮ್ಮ ವ್ಯವಸ್ಥೆಯು ಶಿಕ್ಷಣ, ಆರೋಗ್ಯ ಸೇವೆ, ನೈರ್ಮಲ್ಯ, ಸಂಪರ್ಕ ಮತ್ತು ಜೀವನೋಪಾಯದಲ್ಲಿ ಗ್ರಾಮೀಣ ಅಭಿವೃದ್ಧಿ ಸಮಸ್ಯೆಗಳ ವಿಶ್ವಾಸಾರ್ಹ ಟ್ರಾಕಿಂಗ್ ಅನ್ನು ಖಾತ್ರಿಪಡಿಸುತ್ತದೆ. ಒಟ್ಟಾಗಿ, ನಾವು ಬಲವಾದ ಗ್ರಾಮಗಳನ್ನು ನಿರ್ಮಿಸುತ್ತೇವೆ."
+    },
+    "Report Village Issue": {
+        hindi: "गांव के मुद्दे की रिपोर्ट करें",
+        marathi: "गावातील समस्येचा अहवाल द्या",
+        odia: "ଗ୍ରାମ ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ",
+        kannada: "ಗ್ರಾಮದ ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ"
+    },
+
+    // Dashboard Stats
+    "Total Reports": {
+        hindi: "कुल रिपोर्ट",
+        marathi: "एकूण अहवाल",
+        odia: "ମୋଟ ରିପୋର୍ଟ",
+        kannada: "ಒಟ್ಟು ವರದಿಗಳು"
+    },
+    "Pending": {
+        hindi: "लंबित",
+        marathi: "प्रलंबित",
+        odia: "ବିଚାରାଧୀନ",
+        kannada: "ಬಾಕಿ"
+    },
+    "In Progress": {
+        hindi: "प्रगति में",
+        marathi: "प्रगतीपथावर",
+        odia: "ଚାଲିଛି",
+        kannada: "ಪ್ರಗತಿಯಲ್ಲಿ"
+    },
+    "Resolved": {
+        hindi: "हल किया गया",
+        marathi: "निराकरण",
+        odia: "ସମାଧାନ ହୋଇଛି",
+        kannada: "ಪರಿಹರಿಸಲಾಗಿದೆ"
+    },
+    "Avg. Resolution Days": {
+        hindi: "औसत समाधान दिन",
+        marathi: "सरासरी निराकरण दिवस",
+        odia: "ହାରାହାରି ସମାଧାନ ଦିନ",
+        kannada: "ಸರಾಸರಿ ಪರಿಹಾರ ದಿನಗಳು"
+    },
+    "Pending Review": {
+        hindi: "समीक्षा लंबित",
+        marathi: "पुनरावलोकन प्रलंबित",
+        odia: "ସମୀକ୍ଷା ବିଚାରାଧୀନ",
+        kannada: "ಪರಿಶೀಲನೆ ಬಾಕಿ"
+    },
+
+    // Search and Form Elements
+    "Search reports...": {
+        hindi: "रिपोर्ट खोजें...",
+        marathi: "अहवाल शोधा...",
+        odia: "ରିପୋର୍ଟ ଖୋଜନ୍ତୁ...",
+        kannada: "ವರದಿಗಳನ್ನು ಹುಡುಕಿ..."
+    },
+    "View": {
+        hindi: "देखें",
+        marathi: "पहा",
+        odia: "ଦେଖନ୍ତୁ",
+        kannada: "ನೋಡಿ"
+    },
+    "Waste Not Collected": {
+        hindi: "कचरा एकत्र नहीं किया गया",
+        marathi: "कचरा गोळा केला नाही",
+        odia: "ଆବର୍ଜନା ସଂଗ୍ରହ କରାଯାଇ ନାହିଁ",
+        kannada: "ಕಸವನ್ನು ಸಂಗ್ರಹಿಸಲಾಗಿಲ್ಲ"
+    },
+
+    // Admin Dashboard
+    "Rural Development Dashboard": {
+        hindi: "ग्रामीण विकास डैशबोर्ड",
+        marathi: "ग्रामीण विकास डॅशबोर्ड",
+        odia: "ଗ୍ରାମୀଣ ବିକାଶ ଡ୍ୟାସବୋର୍ଡ",
+        kannada: "ಗ್ರಾಮೀಣ ಅಭಿವೃದ್ಧಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್"
+    },
+    "Adarsh Gram Management System": {
+        hindi: "आदर्श ग्राम प्रबंधन प्रणाली",
+        marathi: "आदर्श ग्राम व्यवस्थापन प्रणाली",
+        odia: "ଆଦର୍ଶ ଗ୍ରାମ ପରିଚାଳନା ପ୍ରଣାଳୀ",
+        kannada: "ಆದರ್ಶ ಗ್ರಾಮ ನಿರ್ವಹಣಾ ವ್ಯವಸ್ಥೆ"
+    },
+    "Welcome, System Administrator (admin)": {
+        hindi: "स्वागत है, सिस्टम एडमिनिस्ट्रेटर (एडमिन)",
+        marathi: "स्वागत आहे, सिस्टम प्रशासक (अॅडमिन)",
+        odia: "ସ୍ୱାଗତ, ସିଷ୍ଟମ ଆଡମିନିଷ୍ଟ୍ରେଟର (ଆଡମିନ)",
+        kannada: "ಸ್ವಾಗತ, ಸಿಸ್ಟಂ ಅಡ್ಮಿನಿಸ್ಟ್ರೇಟರ್ (ಅಡ್ಮಿನ್)"
+    },
+
+    // Admin Tabs
+    "Dashboard": {
+        hindi: "डैशबोर्ड",
+        marathi: "डॅशबोर्ड",
+        odia: "ଡ୍ୟାସବୋର୍ଡ",
+        kannada: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್"
+    },
+    "Reports Management": {
+        hindi: "रिपोर्ट प्रबंधन",
+        marathi: "अहवाल व्यवस्थापन",
+        odia: "ରିପୋର୍ଟ ପରିଚାଳନା",
+        kannada: "ವರದಿ ನಿರ್ವಹಣೆ"
+    },
+    "Analytics": {
+        hindi: "विश्लेषण",
+        marathi: "विश्लेषण",
+        odia: "ବିଶ୍ଳେଷଣ",
+        kannada: "ವಿಶ್ಲೇಷಣೆ"
+    },
+    "Users": {
+        hindi: "उपयोगकर्ता",
+        marathi: "वापरकर्ते",
+        odia: "ବ୍ୟବହାରକାରୀ",
+        kannada: "ಬಳಕೆದಾರರು"
+    },
+    "Settings": {
+        hindi: "सेटिंग्स",
+        marathi: "सेटिंग्ज",
+        odia: "ସେଟିଂସ୍",
+        kannada: "ಸೆಟ್ಟಿಂಗ್ಸ್"
+    },
+
+    // Dashboard Sections
+    "High Priority Issues": {
+        hindi: "उच्च प्राथमिकता के मुद्दे",
+        marathi: "उच्च प्राधान्य समस्या",
+        odia: "ଉଚ୍ଚ ପ୍ରାଥମିକତା ସମସ୍ୟା",
+        kannada: "ಹೆಚ್ಚಿನ ಆದ್ಯತೆಯ ಸಮಸ್ಯೆಗಳು"
+    },
+    "Recent Reports": {
+        hindi: "हाल की रिपोर्ट",
+        marathi: "अलीकडील अहवाल",
+        odia: "ସାମ୍ପ୍ରତିକ ରିପୋର୍ଟ",
+        kannada: "ಇತ್ತೀಚಿನ ವರದಿಗಳು"
+    },
+    "Department Workload": {
+        hindi: "विभागीय कार्यभार",
+        marathi: "विभागीय कार्यभार",
+        odia: "ବିଭାଗୀୟ କାର୍ଯ୍ୟଭାର",
+        kannada: "ಇಲಾಖೆಯ ಕೆಲಸದ ಹೊರೆ"
+    },
+
+    // Analytics Section
+    "Analytics & Insights": {
+        hindi: "विश्लेषण और अंतर्दृष्टि",
+        marathi: "विश्लेषण आणि अंतर्दृष्टी",
+        odia: "ବିଶ୍ଳେଷଣ ଏବଂ ଅନ୍ତର୍ଦୃଷ୍ଟି",
+        kannada: "ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಒಳನೋಟಗಳು"
+    },
+    "Response Time": {
+        hindi: "प्रतिक्रिया समय",
+        marathi: "प्रतिसाद वेळ",
+        odia: "ପ୍ରତିକ୍ରିୟା ସମୟ",
+        kannada: "ಪ್ರತಿಕ್ರಿಯೆ ಸಮಯ"
+    },
+    "Resolution Rate": {
+        hindi: "समाधान दर",
+        marathi: "निराकरण दर",
+        odia: "ସମାଧାନ ହାର",
+        kannada: "ಪರಿಹಾರದ ದರ"
+    },
+    "Citizen Satisfaction": {
+        hindi: "नागरिक संतुष्टि",
+        marathi: "नागरिक समाधान",
+        odia: "ନାଗରିକ ସନ୍ତୁଷ୍ଟି",
+        kannada: "ನಾಗರಿಕರ ತೃಪ್ತಿ"
+    },
+    "days avg": {
+        hindi: "दिन औसत",
+        marathi: "दिवस सरासरी",
+        odia: "ଦିନ ହାରାହାରି",
+        kannada: "ದಿನಗಳ ಸರಾಸರಿ"
+    },
+    "% resolved": {
+        hindi: "% हल किया गया",
+        marathi: "% निराकरण",
+        odia: "% ସମାଧାନ",
+        kannada: "% ಪರಿಹರಿಸಲಾಗಿದೆ"
+    },
+    "/ 5.0 stars": {
+        hindi: "/ 5.0 सितारे",
+        marathi: "/ 5.0 तारे",
+        odia: "/ 5.0 ତାରକା",
+        kannada: "/ 5.0 ನಕ್ಷತ್ರಗಳು"
+    },
+
+    // Buttons & Actions
+    "Add User": {
+        hindi: "उपयोगकर्ता जोड़ें",
+        marathi: "वापरकर्ता जोडा",
+        odia: "ବ୍ୟବହାରକାରୀ ଯୋଗ କରନ୍ତୁ",
+        kannada: "ಬಳಕೆದಾರನನ್ನು ಸೇರಿಸಿ"
+    },
+    "Export Reports": {
+        hindi: "रिपोर्ट निर्यात करें",
+        marathi: "अहवाल निर्यात करा",
+        odia: "ରିପୋର୍ଟ ରପ୍ତାନି କରନ୍ତୁ",
+        kannada: "ವರದಿಗಳನ್ನು ರಫ್ತು ಮಾಡಿ"
+    },
+    "Export to Excel": {
+        hindi: "एक्सेल में निर्यात करें",
+        marathi: "एक्सेलमध्ये निर्यात करा",
+        odia: "ଏକ୍ସେଲରେ ରପ୍ତାନି କରନ୍ତୁ",
+        kannada: "ಎಕ್ಸೆಲ್‌ಗೆ ರಫ್ತು ಮಾಡಿ"
+    },
+    "Export to PDF": {
+        hindi: "पीडीएफ में निर्यात करें",
+        marathi: "पीडीएफमध्ये निर्यात करा",
+        odia: "ପିଡିଏଫରେ ରପ୍ତାନି କରନ୍ତୁ",
+        kannada: "ಪಿಡಿಎಫ್‌ಗೆ ರಫ್ತು ಮಾಡಿ"
+    },
+
+    // Legend
+    "Legend": {
+        hindi: "विवरण",
+        marathi: "स्पष्टीकरण",
+        odia: "କିମ୍ବଦନ୍ତି",
+        kannada: "ಲೆಜೆಂಡ್"
+    },
+
+    // Language Dropdown Text
+    "Language": {
+        hindi: "भाषा",
+        marathi: "भाषा",
+        odia: "ଭାଷା",
+        kannada: "ಭಾಷೆ"
+    }
+};
+
+// Get elements - IMPROVED error handling
+const langBtn = document.getElementById('langBtn');
+const langDropdown = document.getElementById('langDropdown');
+
+// FIXED: Toggle dropdown function with better event handling
+function toggleDropdown(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    if (langDropdown) {
+        langDropdown.classList.toggle('show');
+    }
+}
+
+// FIXED: Close dropdown when clicking outside only
+document.addEventListener('click', function(e) {
+    if (langDropdown && langBtn) {
+        // Only close if click is outside dropdown AND button
+        if (!langBtn.contains(e.target) && !langDropdown.contains(e.target)) {
+            langDropdown.classList.remove('show');
+        }
+    }
+});
+
+// FIXED: Add event listeners with error checking
+if (langBtn) {
+    langBtn.addEventListener('click', toggleDropdown);
+}
+
+// Handle language selection with IMPROVED translation logic
+document.querySelectorAll('#langDropdown a').forEach(item => {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const lang = this.getAttribute('data-lang');
+        
+        if (lang === 'english') {
+            location.reload();
+        } else {
+            // IMPROVED translation logic - more precise element matching
+            Object.keys(translations).forEach(englishText => {
+                // Find all text elements
+                const allElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, button, label, option, a, td, th, div');
+                
+                allElements.forEach(element => {
+                    // Match exact text content (trimmed)
+                    if (element.textContent && element.textContent.trim() === englishText.trim()) {
+                        // Skip if element contains other elements (to avoid breaking structure)
+                        if (element.children.length === 0) {
+                            const translation = translations[englishText][lang];
+                            if (translation) {
+                                element.textContent = translation;
+                            }
+                        }
+                    }
+                });
+            });
+        }
+        
+        // Update button text and close dropdown
+        if (langBtn) {
+            langBtn.textContent = this.textContent;
+        }
+        if (langDropdown) {
+            langDropdown.classList.remove('show');
+        }
+    });
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Translation system initialized');
+});
+</script>
+
+
+    
+</body>
+</html>
