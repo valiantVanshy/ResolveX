@@ -1,4 +1,4 @@
-mmm// SQLite-Powered CivicReport System - Main Application Logic
+// SQLite-Powered CivicReport System - Main Application Logic
 // Add Supabase client (if using CDN script in index.html)
 const { createClient } = window.supabase;
 console.log("Supabase available?", window.supabase);
